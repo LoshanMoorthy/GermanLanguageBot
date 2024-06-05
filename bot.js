@@ -6,10 +6,8 @@ import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import path from 'path';
 
-// Load environment variables from .env file
 dotenv.config();
 
-// Create a new client instance with appropriate intents
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -18,18 +16,14 @@ const client = new Client({
     ]
 });
 
-// Bot token from environment variable
 const token = process.env.DISCORD_BOT_TOKEN;
 
-// A map to keep track of ongoing quizzes and user scores
 const activeQuizzes = new Map();
 const userScores = new Map();
 
-// Get the directory name of the current module
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load words from the JSON file and convert to array format
 let words;
 try {
     const filePath = path.join(__dirname, 'german_english.json');
@@ -41,11 +35,9 @@ try {
     console.error('Error loading words from JSON file:', error);
 }
 
-// Event listener when the bot is ready
 client.once('ready', () => {
     console.log('Ready!');
     
-    // Schedule daily lessons at a specific time (e.g., 10:00 AM)
     schedule.scheduleJob('0 10 * * *', () => {
         const channel = client.channels.cache.get(process.env.CHANNEL_ID);
         if (channel) {
@@ -54,7 +46,6 @@ client.once('ready', () => {
     });
 });
 
-// Event listener for messages
 client.on('messageCreate', async message => {
     if (message.author.bot) return;
 
@@ -78,7 +69,6 @@ client.on('messageCreate', async message => {
     } else if (content === '!help') {
         showHelp(message.channel);
     } else {
-        // Check if the message is an answer to an active quiz
         const quiz = activeQuizzes.get(message.author.id);
         if (quiz) {
             if (content.trim().toLowerCase() === quiz.answer.toLowerCase()) {
@@ -87,12 +77,11 @@ client.on('messageCreate', async message => {
             } else {
                 message.channel.send(`Incorrect. The English word for '${quiz.question}' is '${quiz.answer}'. Here's a hint: ${quiz.hint}`);
             }
-            activeQuizzes.delete(message.author.id); // Remove the quiz from the active quizzes map
+            activeQuizzes.delete(message.author.id);
         }
     }
 });
 
-// Function to translate a phrase using MyMemory Translation API
 async function translatePhrase(channel, phrase, targetLanguage) {
     const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(phrase)}&langpair=en|${targetLanguage}`;
 
@@ -106,7 +95,6 @@ async function translatePhrase(channel, phrase, targetLanguage) {
     }
 }
 
-// Function to fetch a random German word and its English translation from JSON file
 function fetchRandomWord() {
     if (!words || words.length === 0) {
         console.error('No words available for the quiz.');
@@ -116,7 +104,6 @@ function fetchRandomWord() {
     return words[randomIndex];
 }
 
-// Function to provide a vocabulary quiz
 function provideVocabularyQuiz(channel, userId) {
     const vocab = fetchRandomWord();
     if (!vocab) {
@@ -132,11 +119,9 @@ function provideVocabularyQuiz(channel, userId) {
     const hint = `The first letter of the word is '${vocab.english.charAt(0)}'`;
     channel.send(question);
 
-    // Store the question and answer in the active quizzes map
     activeQuizzes.set(userId, { question: vocab.german, answer: vocab.english, hint: hint });
 }
 
-// Function to send a daily lesson
 function sendDailyLesson(channel) {
     const vocab = fetchRandomWord();
     if (!vocab) {
@@ -152,7 +137,6 @@ function sendDailyLesson(channel) {
     channel.send(lesson);
 }
 
-// Function to show the leaderboard
 function showLeaderboard(channel) {
     if (userScores.size === 0) {
         channel.send('No scores yet. Start playing to get on the leaderboard!');
@@ -164,13 +148,11 @@ function showLeaderboard(channel) {
     channel.send(`**Leaderboard**:\n${leaderboard}`);
 }
 
-// Function to increment the user's score
 function incrementScore(userId) {
     const currentScore = userScores.get(userId) || 0;
     userScores.set(userId, currentScore + 1);
 }
 
-// Function to show the help message
 function showHelp(channel) {
     const helpMessage = `
 **German Language Learning Bot Commands:**
@@ -183,5 +165,4 @@ function showHelp(channel) {
     channel.send(helpMessage);
 }
 
-// Log in to Discord with your client's token
 client.login(token);
